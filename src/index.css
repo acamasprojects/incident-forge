@@ -254,6 +254,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 .rb-inject-timeline-title { font-size: 13.5px; color: var(--text-bright); font-weight: 600; }
 .rb-inject-timeline-note { font-size: 11.5px; color: var(--text-faint); font-style: italic; }
 .rb-inject-timeline-status { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent-2); }
+.rb-inject-timeline-status-muted { color: var(--text-faintest); }
 
 .rb-logs-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 .rb-log-column { display: flex; flex-direction: column; gap: 8px; }
