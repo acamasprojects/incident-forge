@@ -76,7 +76,16 @@ export default function ScenarioLibraryPanel({ store, update, flash }) {
     }));
   };
 
+  /** True if some not-yet-ended run is currently using this scenario. */
+  const scenarioInUse = (id) => store.runs.some((r) => r.scenarioId === id && r.status !== "ended");
+
   const removeScenario = (id) => {
+    // Defensive check here too, in case this ever gets called from somewhere
+    // that skips the confirm-dialog guard below.
+    if (scenarioInUse(id)) {
+      flash("Can't delete — this scenario is running an active exercise. End the run first.");
+      return;
+    }
     update((st) => ({ ...st, scenarios: st.scenarios.filter((s) => s.id !== id) }));
   };
 
@@ -202,6 +211,10 @@ export default function ScenarioLibraryPanel({ store, update, flash }) {
                 expanded={expanded}
                 onToggle={() => setExpandedId(expanded ? null : s.id)}
                 onDelete={() => {
+                  if (scenarioInUse(s.id)) {
+                    flash("Can't delete — this scenario is running an active exercise. End the run first.");
+                    return;
+                  }
                   if (confirm(`Delete scenario "${s.title || "Untitled"}"? This also deletes its injects.`)) removeScenario(s.id);
                 }}
                 pinned={s.pinned}
