@@ -24,6 +24,7 @@ export function emptyScenario(title = "New Scenario") {
     summary: "",
     objectives: [],
     tags: [],
+    pinned: false,
     injects: [],
     createdAt: Date.now(),
   };
@@ -86,6 +87,7 @@ export function normalizeScenario(s) {
     summary: s.summary || "",
     objectives: s.objectives || [],
     tags: s.tags || [],
+    pinned: s.pinned || false,
     injects: (s.injects || []).map(normalizeInject),
     createdAt: s.createdAt || Date.now(),
   };
