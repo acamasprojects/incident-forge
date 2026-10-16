@@ -33,8 +33,15 @@ export default function RunConsolePanel({ store, update, flash }) {
   const startNewRun = () => {
     const picked = store.scenarios.find((s) => s.id === pickedScenarioId);
     if (!picked) return;
-    const run = emptyRun(picked);
-    update((st) => ({ ...st, runs: [...st.runs, run] }));
+    // The check happens inside the updater, not against the `isLive` closed
+    // over from the last render — a rapid double-click fires this twice
+    // before React re-renders to hide the button, and only the updater sees
+    // the true latest state in time for the second call to catch it.
+    update((st) => {
+      const alreadyLive = st.runs.some((r) => r.status !== "ended");
+      if (alreadyLive) return st;
+      return { ...st, runs: [...st.runs, emptyRun(picked)] };
+    });
     flash("Run created");
   };
 
