@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { uid } from "../../data/model.js";
 
 const TEAM_LABEL = { red: "Red Team", blue: "Blue Team" };
@@ -15,6 +15,27 @@ export default function TeamViewPanel({ team, store, update }) {
   const currentRun = [...store.runs].reverse().find((r) => r.status === "running" || r.status === "paused");
   const scenario = currentRun ? store.scenarios.find((s) => s.id === currentRun.scenarioId) : null;
 
+  // Computed before the early return below (and with null-safe fallbacks)
+  // since hooks must run unconditionally on every render — the useEffect
+  // right after needs this list regardless of whether there's a live run.
+  const visibleInjects = scenario
+    ? scenario.injects
+        .filter((i) => currentRun.revealedInjectIds.includes(i.id))
+        .filter((i) => i.visibility === "all" || i.visibility === team)
+        .sort((a, b) => a.order - b.order)
+    : [];
+
+  // If the inject this team had selected to comment on stops being visible
+  // to them (the facilitator can change an inject's visibility at any time,
+  // including mid-run), drop the stale selection instead of leaving it
+  // sitting in state ready to be submitted against something they can no
+  // longer see.
+  useEffect(() => {
+    if (linkedInjectId && !visibleInjects.some((i) => i.id === linkedInjectId)) {
+      setLinkedInjectId("");
+    }
+  });
+
   if (!currentRun || !scenario) {
     return (
       <div className="rb-panel">
@@ -26,18 +47,20 @@ export default function TeamViewPanel({ team, store, update }) {
     );
   }
 
-  const visibleInjects = scenario.injects
-    .filter((i) => currentRun.revealedInjectIds.includes(i.id))
-    .filter((i) => i.visibility === "all" || i.visibility === team)
-    .sort((a, b) => a.order - b.order);
-
   const logKey = team === "red" ? "redLog" : "blueLog";
   const log = currentRun[logKey];
-  const injectTitle = (id) => scenario.injects.find((i) => i.id === id)?.title || "Untitled";
+  // Only ever resolves a title from what this team can currently see — never
+  // the full scenario.injects list, which would leak a hidden inject's title
+  // into this team's own log if its visibility got corrected after the fact.
+  const injectTitle = (id) => visibleInjects.find((i) => i.id === id)?.title || "an inject you can no longer see";
 
   const submitDecision = () => {
     if (!draft.trim()) return;
-    const entry = { id: uid(), injectId: linkedInjectId || null, body: draft.trim(), at: Date.now() };
+    // Defensive check even though the <select> below only ever lists
+    // visibleInjects — belt and suspenders against any stale state slipping
+    // through before the effect above has a chance to clear it.
+    const safeInjectId = visibleInjects.some((i) => i.id === linkedInjectId) ? linkedInjectId : null;
+    const entry = { id: uid(), injectId: safeInjectId, body: draft.trim(), at: Date.now() };
     update((st) => ({
       ...st,
       runs: st.runs.map((r) => (r.id === currentRun.id ? { ...r, [logKey]: [...r[logKey], entry] } : r)),
