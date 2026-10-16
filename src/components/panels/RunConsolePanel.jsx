@@ -107,7 +107,9 @@ export default function RunConsolePanel({ store, update, flash }) {
 
       <div className="rb-run-header">
         <div>
-          <div className="rb-run-scenario-title">{scenario?.title || "Untitled scenario"}</div>
+          <div className="rb-run-scenario-title">
+            {scenario?.title || mostRecentRun.scenarioTitleSnapshot || "Untitled scenario"}
+          </div>
           <span className="rb-badge">{STATUS_LABEL[mostRecentRun.status]}</span>
         </div>
         <div className="rb-run-controls">
