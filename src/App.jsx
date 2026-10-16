@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useExerciseStore } from "./hooks/useExerciseStore.js";
 import ScenarioLibraryPanel from "./components/panels/ScenarioLibraryPanel.jsx";
+import RunConsolePanel from "./components/panels/RunConsolePanel.jsx";
+import TeamViewPanel from "./components/panels/TeamViewPanel.jsx";
 
 const VIEW_MODES = [
   { id: "facilitator", label: "Facilitator" },
@@ -76,41 +78,13 @@ export default function App() {
                 <ScenarioLibraryPanel store={store} update={update} flash={flash} />
               )}
               {facilitatorTab === "run" && (
-                <div className="rb-panel">
-                  <div className="rb-panel-head-row">
-                    <h1 className="rb-panel-title">Run Console</h1>
-                  </div>
-                  <div className="rb-empty-panel">Starting and running an exercise comes in a later issue.</div>
-                </div>
+                <RunConsolePanel store={store} update={update} flash={flash} />
               )}
             </>
           )}
 
-          {viewMode === "red" && (
-            <div className="rb-panel">
-              <div className="rb-panel-head-row">
-                <h1 className="rb-panel-title">Red Team View</h1>
-              </div>
-              <p className="rb-panel-note">
-                This view only ever shows what's meant for Red Team: "all" and "red" visibility
-                injects, plus Red's own log. That comes together in a later issue.
-              </p>
-              <div className="rb-empty-panel">Nothing to show yet.</div>
-            </div>
-          )}
-
-          {viewMode === "blue" && (
-            <div className="rb-panel">
-              <div className="rb-panel-head-row">
-                <h1 className="rb-panel-title">Blue Team View</h1>
-              </div>
-              <p className="rb-panel-note">
-                Same idea as Red Team, mirrored: "all" and "blue" visibility injects, plus Blue's
-                own log.
-              </p>
-              <div className="rb-empty-panel">Nothing to show yet.</div>
-            </div>
-          )}
+          {viewMode === "red" && <TeamViewPanel team="red" store={store} update={update} />}
+          {viewMode === "blue" && <TeamViewPanel team="blue" store={store} update={update} />}
         </main>
       </div>
       {toast && <div className="rb-toast">{toast}</div>}
