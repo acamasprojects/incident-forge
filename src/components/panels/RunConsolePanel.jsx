@@ -1,21 +1,27 @@
 import { useState } from "react";
 import { emptyRun, uid } from "../../data/model.js";
+import { printAfterActionReport, exportRunJson } from "../../utils/exportAfterAction.js";
 
 const STATUS_LABEL = { lobby: "Ready to start", running: "Running", paused: "Paused", ended: "Ended" };
 const VISIBILITY_LABEL = { all: "All", red: "Red Team", blue: "Blue Team", facilitator: "Facilitator only" };
 const VISIBILITY_COLOR = { all: "#87A29C", red: "#E2492E", blue: "#33C17A", facilitator: "#3FA7D6" };
 
 /**
- * Runs one scenario at a time. The "current" run is whichever one hasn't
- * ended yet — lobby (created but not started), running, or paused. Starting
- * a new run is only offered once the last one has ended, so there's never
- * more than one exercise live at a time.
+ * Runs one scenario at a time. "Most recent run" is shown whether it's
+ * still live (lobby/running/paused) or already ended — an ended run stays
+ * visible with its full timeline and export buttons instead of vanishing
+ * the moment it's over. Starting another run is only offered once the last
+ * one has ended, so there's never more than one exercise live at a time.
+ *
+ * Only this one run is surfaced here — older ended runs stay in the store
+ * (nothing is deleted) but there's no history browser for them yet.
  */
 export default function RunConsolePanel({ store, update, flash }) {
   const [pickedScenarioId, setPickedScenarioId] = useState(store.scenarios[0]?.id || "");
 
-  const currentRun = [...store.runs].reverse().find((r) => r.status !== "ended");
-  const scenario = currentRun ? store.scenarios.find((s) => s.id === currentRun.scenarioId) : null;
+  const mostRecentRun = [...store.runs].reverse()[0] || null;
+  const isLive = mostRecentRun && mostRecentRun.status !== "ended";
+  const scenario = mostRecentRun ? store.scenarios.find((s) => s.id === mostRecentRun.scenarioId) : null;
 
   const logEvent = (run, type, payload = {}) => ({
     ...run,
@@ -60,7 +66,25 @@ export default function RunConsolePanel({ store, update, flash }) {
     });
   };
 
-  if (!currentRun) {
+  const scenarioPicker = (
+    <div className="rb-empty-panel">
+      <p>Pick a scenario to start a new run.</p>
+      <div className="rb-run-picker">
+        <select className="rb-input" value={pickedScenarioId} onChange={(e) => setPickedScenarioId(e.target.value)}>
+          {store.scenarios.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.title || "Untitled"}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="rb-btn rb-btn-primary" onClick={startNewRun}>
+          Start Run
+        </button>
+      </div>
+    </div>
+  );
+
+  if (!mostRecentRun) {
     return (
       <div className="rb-panel">
         <div className="rb-panel-head-row">
@@ -69,21 +93,7 @@ export default function RunConsolePanel({ store, update, flash }) {
         {store.scenarios.length === 0 ? (
           <div className="rb-empty-panel">No scenarios yet. Add one in the Scenarios tab first.</div>
         ) : (
-          <div className="rb-empty-panel">
-            <p>Pick a scenario to start a new run.</p>
-            <div className="rb-run-picker">
-              <select className="rb-input" value={pickedScenarioId} onChange={(e) => setPickedScenarioId(e.target.value)}>
-                {store.scenarios.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.title || "Untitled"}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="rb-btn rb-btn-primary" onClick={startNewRun}>
-                Start Run
-              </button>
-            </div>
-          </div>
+          scenarioPicker
         )}
       </div>
     );
@@ -100,36 +110,46 @@ export default function RunConsolePanel({ store, update, flash }) {
       <div className="rb-run-header">
         <div>
           <div className="rb-run-scenario-title">{scenario?.title || "Untitled scenario"}</div>
-          <span className="rb-badge">{STATUS_LABEL[currentRun.status]}</span>
+          <span className="rb-badge">{STATUS_LABEL[mostRecentRun.status]}</span>
         </div>
         <div className="rb-run-controls">
-          {currentRun.status === "lobby" && (
+          {mostRecentRun.status === "lobby" && (
             <>
-              <button type="button" className="rb-btn rb-btn-primary" onClick={() => startExercise(currentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-primary" onClick={() => startExercise(mostRecentRun.id)}>
                 Start Exercise
               </button>
-              <button type="button" className="rb-btn rb-btn-ghost" onClick={() => cancelRun(currentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-ghost" onClick={() => cancelRun(mostRecentRun.id)}>
                 Cancel
               </button>
             </>
           )}
-          {currentRun.status === "running" && (
+          {mostRecentRun.status === "running" && (
             <>
-              <button type="button" className="rb-btn rb-btn-ghost" onClick={() => pauseExercise(currentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-ghost" onClick={() => pauseExercise(mostRecentRun.id)}>
                 Pause
               </button>
-              <button type="button" className="rb-btn rb-btn-danger" onClick={() => endExercise(currentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-danger" onClick={() => endExercise(mostRecentRun.id)}>
                 End Exercise
               </button>
             </>
           )}
-          {currentRun.status === "paused" && (
+          {mostRecentRun.status === "paused" && (
             <>
-              <button type="button" className="rb-btn rb-btn-primary" onClick={() => resumeExercise(currentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-primary" onClick={() => resumeExercise(mostRecentRun.id)}>
                 Resume
               </button>
-              <button type="button" className="rb-btn rb-btn-danger" onClick={() => endExercise(currentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-danger" onClick={() => endExercise(mostRecentRun.id)}>
                 End Exercise
+              </button>
+            </>
+          )}
+          {mostRecentRun.status === "ended" && (
+            <>
+              <button type="button" className="rb-btn rb-btn-ghost" onClick={() => printAfterActionReport(mostRecentRun, scenario)}>
+                Print Report
+              </button>
+              <button type="button" className="rb-btn rb-btn-ghost" onClick={() => exportRunJson(mostRecentRun, scenario)}>
+                Download JSON
               </button>
             </>
           )}
@@ -143,7 +163,7 @@ export default function RunConsolePanel({ store, update, flash }) {
         ) : (
           <div className="rb-inject-timeline">
             {sortedInjects.map((inj) => {
-              const revealed = currentRun.revealedInjectIds.includes(inj.id);
+              const revealed = mostRecentRun.revealedInjectIds.includes(inj.id);
               return (
                 <div key={inj.id} className={`rb-inject-timeline-row${revealed ? " rb-inject-timeline-row-revealed" : ""}`}>
                   <div className="rb-inject-timeline-main">
@@ -158,16 +178,18 @@ export default function RunConsolePanel({ store, update, flash }) {
                   </div>
                   {revealed ? (
                     <span className="rb-inject-timeline-status">Revealed</span>
-                  ) : (
+                  ) : isLive ? (
                     <button
                       type="button"
                       className="rb-btn rb-btn-ghost rb-btn-small"
-                      disabled={currentRun.status !== "running"}
-                      onClick={() => revealInject(currentRun.id, inj.id)}
-                      title={currentRun.status !== "running" ? "Start the exercise to reveal injects" : "Reveal to the teams"}
+                      disabled={mostRecentRun.status !== "running"}
+                      onClick={() => revealInject(mostRecentRun.id, inj.id)}
+                      title={mostRecentRun.status !== "running" ? "Start the exercise to reveal injects" : "Reveal to the teams"}
                     >
                       Reveal
                     </button>
+                  ) : (
+                    <span className="rb-inject-timeline-status rb-inject-timeline-status-muted">Not revealed</span>
                   )}
                 </div>
               );
@@ -179,10 +201,21 @@ export default function RunConsolePanel({ store, update, flash }) {
       <div className="rb-field">
         <span className="rb-field-label">Team logs</span>
         <div className="rb-logs-columns">
-          <LogColumn title="Red Team" entries={currentRun.redLog} injects={scenario?.injects || []} />
-          <LogColumn title="Blue Team" entries={currentRun.blueLog} injects={scenario?.injects || []} />
+          <LogColumn title="Red Team" entries={mostRecentRun.redLog} injects={scenario?.injects || []} />
+          <LogColumn title="Blue Team" entries={mostRecentRun.blueLog} injects={scenario?.injects || []} />
         </div>
       </div>
+
+      {!isLive && (
+        <div className="rb-field rb-injects-field">
+          <span className="rb-field-label">Start another run</span>
+          {store.scenarios.length === 0 ? (
+            <div className="rb-empty-panel">No scenarios yet. Add one in the Scenarios tab first.</div>
+          ) : (
+            scenarioPicker
+          )}
+        </div>
+      )}
     </div>
   );
 }
