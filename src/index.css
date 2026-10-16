@@ -214,6 +214,26 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 .rb-modal-title { font-family: var(--font-display); font-size: 16px; color: var(--text-bright); margin: 0; letter-spacing: 0.02em; }
 .rb-modal-body { padding: 16px 20px 20px; overflow-y: auto; }
 
+/* ---------- facilitator sub-tabs ---------- */
+.rb-subtab-nav { display: flex; gap: 6px; margin-bottom: 18px; }
+.rb-subtab-btn { background: none; border: 1px solid var(--border-3); color: var(--text-dim); padding: 7px 14px; border-radius: 2px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.rb-subtab-btn-active { background: var(--accent); color: var(--ink); border-color: var(--accent); }
+
+/* ---------- objectives ---------- */
+.rb-objective-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.rb-objective-row { display: flex; align-items: center; gap: 8px; }
+.rb-objective-text { flex: 1; font-size: 13px; color: var(--text); }
+.rb-objective-text-input { flex: 1; }
+
+/* ---------- nested injects ---------- */
+.rb-injects-field { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.rb-inject-list { margin-top: 10px; }
+.rb-inject-order-btns { display: flex; gap: 4px; }
+
+/* ---------- suggestions ---------- */
+.rb-suggestions { margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.rb-suggestions-label { font-size: 12px; color: var(--text-faint); }
+
 /* ---------- toast ---------- */
 .rb-toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);

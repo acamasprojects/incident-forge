@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useExerciseStore } from "./hooks/useExerciseStore.js";
-import { emptyScenario } from "./data/model.js";
+import ScenarioLibraryPanel from "./components/panels/ScenarioLibraryPanel.jsx";
 
 const VIEW_MODES = [
   { id: "facilitator", label: "Facilitator" },
@@ -8,9 +8,21 @@ const VIEW_MODES = [
   { id: "blue", label: "Blue Team" },
 ];
 
+const FACILITATOR_TABS = [
+  { id: "scenarios", label: "Scenarios" },
+  { id: "run", label: "Run Console" },
+];
+
 export default function App() {
   const { loaded, store, update } = useExerciseStore();
   const [viewMode, setViewMode] = useState("facilitator");
+  const [facilitatorTab, setFacilitatorTab] = useState("scenarios");
+  const [toast, setToast] = useState(null);
+
+  const flash = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 1800);
+  };
 
   if (!loaded) {
     return (
@@ -19,13 +31,6 @@ export default function App() {
       </div>
     );
   }
-
-  const addTestScenario = () => {
-    update((s) => ({
-      ...s,
-      scenarios: [...s.scenarios, emptyScenario(`Scenario ${s.scenarios.length + 1}`)],
-    }));
-  };
 
   return (
     <div className={`rb-page rb-mode-${viewMode}`}>
@@ -54,27 +59,31 @@ export default function App() {
 
         <main className="rb-content">
           {viewMode === "facilitator" && (
-            <div className="rb-panel">
-              <div className="rb-panel-head-row">
-                <h1 className="rb-panel-title">Facilitator Console</h1>
-              </div>
-              <div className="rb-empty-panel">
-                <p>
-                  The scenario library, run console, and team views land in later issues. For now,
-                  this proves the data model and local save are working.
-                </p>
-                <button type="button" className="rb-btn rb-btn-primary" onClick={addTestScenario}>
-                  + Add test scenario
-                </button>
-                {store.scenarios.length > 0 && (
-                  <ul>
-                    {store.scenarios.map((s) => (
-                      <li key={s.id}>{s.title}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
+            <>
+              <nav className="rb-subtab-nav">
+                {FACILITATOR_TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`rb-subtab-btn${facilitatorTab === t.id ? " rb-subtab-btn-active" : ""}`}
+                    onClick={() => setFacilitatorTab(t.id)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </nav>
+              {facilitatorTab === "scenarios" && (
+                <ScenarioLibraryPanel store={store} update={update} flash={flash} />
+              )}
+              {facilitatorTab === "run" && (
+                <div className="rb-panel">
+                  <div className="rb-panel-head-row">
+                    <h1 className="rb-panel-title">Run Console</h1>
+                  </div>
+                  <div className="rb-empty-panel">Starting and running an exercise comes in a later issue.</div>
+                </div>
+              )}
+            </>
           )}
 
           {viewMode === "red" && (
@@ -104,6 +113,7 @@ export default function App() {
           )}
         </main>
       </div>
+      {toast && <div className="rb-toast">{toast}</div>}
     </div>
   );
 }
