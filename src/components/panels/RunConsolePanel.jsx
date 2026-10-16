@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { emptyRun, uid } from "../../data/model.js";
+import { emptyRun, uid, VISIBILITY_LABEL, VISIBILITY_COLOR } from "../../data/model.js";
 import { printAfterActionReport, exportRunJson } from "../../utils/exportAfterAction.js";
 
 const STATUS_LABEL = { lobby: "Ready to start", running: "Running", paused: "Paused", ended: "Ended" };
-const VISIBILITY_LABEL = { all: "All", red: "Red Team", blue: "Blue Team", facilitator: "Facilitator only" };
-const VISIBILITY_COLOR = { all: "#87A29C", red: "#E2492E", blue: "#33C17A", facilitator: "#3FA7D6" };
 
 /**
  * Runs one scenario at a time. "Most recent run" is shown whether it's

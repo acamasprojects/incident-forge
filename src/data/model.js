@@ -11,6 +11,11 @@ export const VISIBILITIES = ["all", "red", "blue", "facilitator"];
 export const TEAMS = ["red", "blue"];
 export const RUN_STATUSES = ["lobby", "running", "paused", "ended"];
 
+// One place for how each visibility reads and is colored, so the Scenario
+// Library and Run Console can't drift out of sync with each other.
+export const VISIBILITY_LABEL = { all: "All", red: "Red Team", blue: "Blue Team", facilitator: "Facilitator only" };
+export const VISIBILITY_COLOR = { all: "#87A29C", red: "#E2492E", blue: "#33C17A", facilitator: "#3FA7D6" };
+
 /** Short random id. Good enough for a local-only store with nothing else to collide with. */
 export function uid() {
   return Math.random().toString(36).slice(2, 10);

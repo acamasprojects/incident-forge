@@ -1,13 +1,10 @@
 import { useState, useRef } from "react";
-import { emptyScenario, emptyInject, VISIBILITIES } from "../../data/model.js";
+import { emptyScenario, emptyInject, VISIBILITIES, VISIBILITY_LABEL, VISIBILITY_COLOR } from "../../data/model.js";
 import { searchAndFilter, suggestClosest, hasAllTags, collectTags } from "../../utils/search.js";
 import EntityCard from "../EntityCard.jsx";
 import FilterBar from "../FilterBar.jsx";
 import ChoiceChips from "../ChoiceChips.jsx";
 import TagInput from "../TagInput.jsx";
-
-const VISIBILITY_LABEL = { all: "All", red: "Red Team", blue: "Blue Team", facilitator: "Facilitator only" };
-const VISIBILITY_COLOR = { all: "#87A29C", red: "#E2492E", blue: "#33C17A", facilitator: "#3FA7D6" };
 
 const SORT_OPTIONS = [
   { value: "relevance", label: "Relevance" },
