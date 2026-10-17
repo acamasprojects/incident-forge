@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { emptyRun, uid, VISIBILITY_LABEL, VISIBILITY_COLOR } from "../../data/model.js";
 import { printAfterActionReport, exportRunJson } from "../../utils/exportAfterAction.js";
+import { elapsedMs, formatDuration } from "../../utils/elapsedTime.js";
 
 const STATUS_LABEL = { lobby: "Ready to start", running: "Running", paused: "Paused", ended: "Ended" };
 
@@ -43,6 +44,16 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
   const isLive = mostRecentRun && mostRecentRun.status !== "ended";
   const scenario = mostRecentRun ? store.scenarios.find((s) => s.id === mostRecentRun.scenarioId) : null;
 
+  // Live clock: only ticks while the exercise is actually running, so a
+  // paused or ended run just shows its frozen elapsedMs() value without a
+  // timer running in the background for no reason.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!mostRecentRun || mostRecentRun.status !== "running") return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [mostRecentRun?.id, mostRecentRun?.status]);
+
   const logEvent = (run, type, payload = {}) => ({
     ...run,
     events: [...run.events, { id: uid(), type, payload, at: Date.now() }],
@@ -78,14 +89,26 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
     updateRun(runId, (r) => logEvent({ ...r, status: "running", startedAt: Date.now() }, "status_changed", { status: "running" }));
   };
   const pauseExercise = (runId) => {
-    updateRun(runId, (r) => logEvent({ ...r, status: "paused" }, "status_changed", { status: "paused" }));
+    updateRun(runId, (r) => logEvent({ ...r, status: "paused", pausedAt: Date.now() }, "status_changed", { status: "paused" }));
   };
+  // Folds the just-finished pause into pausedMs so the live clock, once
+  // running again, keeps counting from where it left off instead of jumping
+  // ahead by however long the pause lasted.
+  const foldOpenPause = (r) => (r.pausedAt ? r.pausedMs + (Date.now() - r.pausedAt) : r.pausedMs);
   const resumeExercise = (runId) => {
-    updateRun(runId, (r) => logEvent({ ...r, status: "running" }, "status_changed", { status: "running" }));
+    updateRun(runId, (r) =>
+      logEvent({ ...r, status: "running", pausedMs: foldOpenPause(r), pausedAt: null }, "status_changed", { status: "running" })
+    );
   };
   const endExercise = (runId) => {
     if (!confirm("End this exercise? The logs stick around, but no more injects can be revealed.")) return;
-    updateRun(runId, (r) => logEvent({ ...r, status: "ended", endedAt: Date.now() }, "status_changed", { status: "ended" }));
+    updateRun(runId, (r) =>
+      logEvent(
+        { ...r, status: "ended", endedAt: Date.now(), pausedMs: foldOpenPause(r), pausedAt: null },
+        "status_changed",
+        { status: "ended" }
+      )
+    );
   };
 
   const revealInject = (runId, injectId) => {
@@ -144,6 +167,11 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
             {scenario?.title || mostRecentRun.scenarioTitleSnapshot || "Untitled scenario"}
           </div>
           <span className="rb-badge">{STATUS_LABEL[mostRecentRun.status]}</span>
+          {mostRecentRun.startedAt != null && (
+            <span className="rb-run-elapsed" title="Time elapsed, excluding any time spent paused">
+              {formatDuration(elapsedMs(mostRecentRun, now))}
+            </span>
+          )}
         </div>
         <div className="rb-run-controls">
           {mostRecentRun.status === "lobby" && (

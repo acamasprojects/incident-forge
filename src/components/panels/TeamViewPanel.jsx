@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { uid } from "../../data/model.js";
+import { elapsedMs, formatDuration } from "../../utils/elapsedTime.js";
 
 const TEAM_LABEL = { red: "Red Team", blue: "Blue Team" };
 
@@ -35,6 +36,16 @@ export default function TeamViewPanel({ team, store, update }) {
       setLinkedInjectId("");
     }
   });
+
+  // Live clock, same as the Run Console: only ticks while actually running,
+  // so it doesn't need to care whether currentRun exists yet — the effect
+  // body just bails out when there's nothing to tick for.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!currentRun || currentRun.status !== "running") return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [currentRun?.id, currentRun?.status]);
 
   if (!currentRun || !scenario) {
     return (
@@ -73,6 +84,11 @@ export default function TeamViewPanel({ team, store, update }) {
       <div className="rb-panel-head-row">
         <h1 className="rb-panel-title">{TEAM_LABEL[team]} View</h1>
         <span className="rb-badge">{scenario.title}</span>
+        {currentRun.startedAt != null && (
+          <span className="rb-run-elapsed" title="Time elapsed, excluding any time spent paused">
+            {formatDuration(elapsedMs(currentRun, now))}
+          </span>
+        )}
       </div>
 
       {currentRun.status === "paused" && <p className="rb-panel-note">The exercise is paused right now.</p>}
