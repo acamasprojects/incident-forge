@@ -225,6 +225,13 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 .rb-objective-text { flex: 1; font-size: 13px; color: var(--text); }
 .rb-objective-text-input { flex: 1; }
 
+.rb-objective-outcomes-list { display: flex; flex-direction: column; gap: 10px; }
+.rb-objective-outcome-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  border: 1px solid var(--border); border-radius: 2px; padding: 10px 12px; background: var(--ink-2);
+}
+.rb-objective-outcome-text { font-size: 13px; color: var(--text); flex: 1; min-width: 180px; }
+
 /* ---------- nested injects ---------- */
 .rb-injects-field { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
 .rb-inject-list { margin-top: 10px; }
