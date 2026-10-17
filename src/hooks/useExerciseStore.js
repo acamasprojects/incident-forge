@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { emptyStore, normalizeStore } from "../data/model.js";
+import { emptyStore, normalizeStore, importRunExport } from "../data/model.js";
 
 const STORE_KEY = "incident-forge-data";
 
@@ -91,5 +91,10 @@ export function useExerciseStore() {
     setStore(normalizeStore(next));
   }, []);
 
-  return { loaded, store, update, replaceStore };
+  /** Merge one exported run (+ its scenario, if included) into the store. Throws on an unrecognized file — the caller decides how to report that. */
+  const importRun = useCallback((data) => {
+    setStore((prev) => importRunExport(prev, data));
+  }, []);
+
+  return { loaded, store, update, replaceStore, importRun };
 }

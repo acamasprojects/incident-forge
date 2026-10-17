@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { emptyRun, uid, VISIBILITY_LABEL, VISIBILITY_COLOR } from "../../data/model.js";
 import { printAfterActionReport, exportRunJson } from "../../utils/exportAfterAction.js";
 
@@ -14,8 +14,28 @@ const STATUS_LABEL = { lobby: "Ready to start", running: "Running", paused: "Pau
  * Older ended runs stay in the store (nothing is deleted) and show up below
  * as a Past Runs list, each with its own report/export buttons.
  */
-export default function RunConsolePanel({ store, update, flash }) {
+export default function RunConsolePanel({ store, update, flash, onImportRun }) {
   const [pickedScenarioId, setPickedScenarioId] = useState(store.scenarios[0]?.id || "");
+  const importInputRef = useRef(null);
+
+  const importButton = (
+    <>
+      <button type="button" className="rb-btn rb-btn-ghost rb-btn-small" onClick={() => importInputRef.current?.click()}>
+        Import Run
+      </button>
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="application/json"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onImportRun(file);
+          e.target.value = "";
+        }}
+      />
+    </>
+  );
 
   const runsNewestFirst = [...store.runs].reverse();
   const mostRecentRun = runsNewestFirst[0] || null;
@@ -96,6 +116,7 @@ export default function RunConsolePanel({ store, update, flash }) {
       <div className="rb-panel">
         <div className="rb-panel-head-row">
           <h1 className="rb-panel-title">Run Console</h1>
+          {importButton}
         </div>
         {store.scenarios.length === 0 ? (
           <div className="rb-empty-panel">No scenarios yet. Add one in the Scenarios tab first.</div>
@@ -112,6 +133,7 @@ export default function RunConsolePanel({ store, update, flash }) {
     <div className="rb-panel">
       <div className="rb-panel-head-row">
         <h1 className="rb-panel-title">Run Console</h1>
+        {importButton}
       </div>
 
       <div className="rb-run-header">
