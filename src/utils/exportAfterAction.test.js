@@ -12,6 +12,7 @@ function baseRun(overrides = {}) {
     redLog: [],
     blueLog: [],
     objectiveOutcomes: [],
+    debriefNotes: "",
     ...overrides,
   };
 }
@@ -51,5 +52,20 @@ describe("buildAfterActionHtml objectives section", () => {
     const html = buildAfterActionHtml(run, scenario);
     assert.ok(html.includes("Original objective"));
     assert.ok(!html.includes("Edited objective"));
+  });
+});
+
+describe("buildAfterActionHtml debrief notes section", () => {
+  test("omits the Debrief Notes section when there are none", () => {
+    const html = buildAfterActionHtml(baseRun({ debriefNotes: "" }), null);
+    assert.ok(!html.includes("Debrief Notes"));
+  });
+
+  test("renders debrief notes, converting newlines to <br> and escaping HTML", () => {
+    const html = buildAfterActionHtml(baseRun({ debriefNotes: "Line one\nLine two <script>" }), null);
+    assert.ok(html.includes("<h2>Debrief Notes</h2>"));
+    assert.ok(html.includes("Line one<br>Line two"));
+    assert.ok(!html.includes("<script>"));
+    assert.ok(html.includes("&lt;script&gt;"));
   });
 });

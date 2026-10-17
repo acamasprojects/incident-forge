@@ -81,6 +81,11 @@ export function emptyRun(scenario) {
     // for it after the fact.
     pausedMs: 0,
     pausedAt: null,
+    // Free-text wrap-up notes (what went well, what to change next time).
+    // Editable any time, but there's nowhere else to capture this once the
+    // exercise is over — the decision logs are what the teams said, this is
+    // what the facilitator thought about it.
+    debriefNotes: "",
     createdAt: Date.now(),
   };
 }
@@ -139,6 +144,7 @@ export function normalizeRun(r) {
     pausedMs: r.pausedMs || 0,
     pausedAt: r.pausedAt || null,
     objectiveOutcomes: (r.objectiveOutcomes || []).map(normalizeObjectiveOutcome),
+    debriefNotes: r.debriefNotes || "",
     createdAt: r.createdAt || Date.now(),
   };
 }
