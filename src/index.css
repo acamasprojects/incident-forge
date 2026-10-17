@@ -256,6 +256,16 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 .rb-inject-timeline-status { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent-2); }
 .rb-inject-timeline-status-muted { color: var(--text-faintest); }
 
+.rb-past-runs-list { display: flex; flex-direction: column; gap: 8px; }
+.rb-past-run-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  border: 1px solid var(--border); border-radius: 2px; padding: 10px 12px; background: var(--ink-2);
+}
+.rb-past-run-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.rb-past-run-title { font-size: 13.5px; color: var(--text-bright); font-weight: 600; }
+.rb-past-run-dates { font-size: 11.5px; color: var(--text-faint); font-family: var(--font-mono); }
+.rb-past-run-actions { display: flex; gap: 8px; }
+
 .rb-logs-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 .rb-log-column { display: flex; flex-direction: column; gap: 8px; }
 .rb-log-column-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); margin-bottom: 2px; }
