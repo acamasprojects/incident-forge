@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { uid } from "../../data/model.js";
+import { uid, visibleInjectsForTeam } from "../../data/model.js";
 import { elapsedMs, formatDuration } from "../../utils/elapsedTime.js";
 
 const TEAM_LABEL = { red: "Red Team", blue: "Blue Team" };
@@ -16,15 +16,11 @@ export default function TeamViewPanel({ team, store, update }) {
   const currentRun = [...store.runs].reverse().find((r) => r.status === "running" || r.status === "paused");
   const scenario = currentRun ? store.scenarios.find((s) => s.id === currentRun.scenarioId) : null;
 
-  // Computed before the early return below (and with null-safe fallbacks)
-  // since hooks must run unconditionally on every render — the useEffect
-  // right after needs this list regardless of whether there's a live run.
-  const visibleInjects = scenario
-    ? scenario.injects
-        .filter((i) => currentRun.revealedInjectIds.includes(i.id))
-        .filter((i) => i.visibility === "all" || i.visibility === team)
-        .sort((a, b) => a.order - b.order)
-    : [];
+  // Computed before the early return below (with a null-safe fallback built
+  // into visibleInjectsForTeam) since hooks must run unconditionally on
+  // every render — the useEffect right after needs this list regardless of
+  // whether there's a live run.
+  const visibleInjects = visibleInjectsForTeam(currentRun, scenario, team);
 
   // If the inject this team had selected to comment on stops being visible
   // to them (the facilitator can change an inject's visibility at any time,

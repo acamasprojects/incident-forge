@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { emptyRun, uid, VISIBILITY_LABEL, VISIBILITY_COLOR, OBJECTIVE_OUTCOMES, OBJECTIVE_OUTCOME_LABEL } from "../../data/model.js";
+import { emptyRun, uid, foldOpenPause, VISIBILITY_LABEL, VISIBILITY_COLOR, OBJECTIVE_OUTCOMES, OBJECTIVE_OUTCOME_LABEL } from "../../data/model.js";
 import { printAfterActionReport, exportRunJson } from "../../utils/exportAfterAction.js";
 import { elapsedMs, formatDuration } from "../../utils/elapsedTime.js";
 import ChoiceChips from "../ChoiceChips.jsx";
@@ -92,10 +92,6 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
   const pauseExercise = (runId) => {
     updateRun(runId, (r) => logEvent({ ...r, status: "paused", pausedAt: Date.now() }, "status_changed", { status: "paused" }));
   };
-  // Folds the just-finished pause into pausedMs so the live clock, once
-  // running again, keeps counting from where it left off instead of jumping
-  // ahead by however long the pause lasted.
-  const foldOpenPause = (r) => (r.pausedAt ? r.pausedMs + (Date.now() - r.pausedAt) : r.pausedMs);
   const resumeExercise = (runId) => {
     updateRun(runId, (r) =>
       logEvent({ ...r, status: "running", pausedMs: foldOpenPause(r), pausedAt: null }, "status_changed", { status: "running" })
