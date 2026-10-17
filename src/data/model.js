@@ -149,6 +149,33 @@ export function normalizeRun(r) {
   };
 }
 
+/**
+ * Folds a run's currently-open pause (if any) into its pausedMs total, as of
+ * atTime. Used by resumeExercise/endExercise (atTime defaults to "now") and
+ * by importRunExport (atTime is the moment the file was exported, since the
+ * pause can't still be "open" by the time it's imported). One definition
+ * instead of two copies of the same math.
+ */
+export function foldOpenPause(run, atTime = Date.now()) {
+  return run.pausedAt ? run.pausedMs + (atTime - run.pausedAt) : run.pausedMs;
+}
+
+/**
+ * Which of a scenario's injects a given team can currently see during a run:
+ * revealed so far, and visible to "all" or specifically to that team, in
+ * reveal order. Returns [] if there's no run or scenario yet. This is also
+ * the exact rule a future multi-device backend's row-level security policy
+ * needs to replicate server-side (see docs/multi-device-sync-plan.md), so it
+ * has one tested definition instead of being re-derived from scratch there.
+ */
+export function visibleInjectsForTeam(run, scenario, team) {
+  if (!run || !scenario) return [];
+  return scenario.injects
+    .filter((i) => run.revealedInjectIds.includes(i.id))
+    .filter((i) => i.visibility === "all" || i.visibility === team)
+    .sort((a, b) => a.order - b.order);
+}
+
 /** Run on every load and import so the store always matches the current shape. */
 export function normalizeStore(store) {
   return {
@@ -196,12 +223,11 @@ export function importRunExport(store, data) {
 
   const normalizedRun = normalizeRun(data.run);
   // If the file was exported mid-pause, fold that open pause into pausedMs
-  // the same way resumeExercise/endExercise do — otherwise pausedAt would
-  // stay set on a run we're about to force to "ended", which the elapsed-
-  // time math assumes can't happen.
-  const pausedMs = normalizedRun.pausedAt
-    ? normalizedRun.pausedMs + ((normalizedRun.endedAt || normalizedRun.createdAt) - normalizedRun.pausedAt)
-    : normalizedRun.pausedMs;
+  // the same way resumeExercise/endExercise do, as of the export time rather
+  // than now, since the pause can't still be "open" by the time this file
+  // gets imported. Otherwise pausedAt would stay set on a run we're about to
+  // force to "ended", which the elapsed-time math assumes can't happen.
+  const pausedMs = foldOpenPause(normalizedRun, normalizedRun.endedAt || normalizedRun.createdAt);
   const run = {
     ...normalizedRun,
     id: uid(),

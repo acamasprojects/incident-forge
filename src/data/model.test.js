@@ -22,6 +22,8 @@ import {
   normalizeRun,
   normalizeStore,
   importRunExport,
+  foldOpenPause,
+  visibleInjectsForTeam,
 } from "./model.js";
 
 /** Every field in `expected` must exist (and not be `undefined`) on `actual`. */
@@ -135,5 +137,61 @@ describe("importRunExport", () => {
     const next = importRunExport(emptyStore(), data);
     assert.equal(next.runs[0].pausedAt, null);
     assert.equal(next.runs[0].pausedMs, 4000);
+  });
+});
+
+describe("foldOpenPause", () => {
+  test("returns pausedMs unchanged when there's no open pause", () => {
+    const run = { pausedAt: null, pausedMs: 5000 };
+    assert.equal(foldOpenPause(run, 999999), 5000);
+  });
+
+  test("folds the open pause's duration into pausedMs, as of the given time", () => {
+    const run = { pausedAt: 1000, pausedMs: 2000 };
+    assert.equal(foldOpenPause(run, 4000), 5000); // 2000 + (4000 - 1000)
+  });
+
+  test("defaults atTime to Date.now() when not given", () => {
+    const before = Date.now();
+    const run = { pausedAt: before, pausedMs: 0 };
+    const result = foldOpenPause(run);
+    assert.ok(result >= 0);
+  });
+});
+
+describe("visibleInjectsForTeam", () => {
+  function buildRunAndScenario(injectOverrides) {
+    const scenario = emptyScenario("Scenario");
+    scenario.injects = injectOverrides.map((o, i) => ({ ...emptyInject(i), ...o }));
+    const run = emptyRun(scenario);
+    run.revealedInjectIds = scenario.injects.filter((i) => i.revealed).map((i) => i.id);
+    return { run, scenario };
+  }
+
+  test("returns [] when there's no run or no scenario", () => {
+    assert.deepEqual(visibleInjectsForTeam(null, {}, "red"), []);
+    assert.deepEqual(visibleInjectsForTeam({}, null, "red"), []);
+  });
+
+  test("excludes injects that haven't been revealed yet", () => {
+    const { run, scenario } = buildRunAndScenario([{ id: "i1", visibility: "all", revealed: false }]);
+    assert.deepEqual(visibleInjectsForTeam(run, scenario, "red"), []);
+  });
+
+  test("excludes injects visible only to the other team or to the facilitator", () => {
+    const { run, scenario } = buildRunAndScenario([
+      { id: "i1", visibility: "blue", revealed: true },
+      { id: "i2", visibility: "facilitator", revealed: true },
+    ]);
+    assert.deepEqual(visibleInjectsForTeam(run, scenario, "red"), []);
+  });
+
+  test("includes revealed injects visible to 'all' or to this team, sorted by order", () => {
+    const { run, scenario } = buildRunAndScenario([
+      { id: "i1", visibility: "red", revealed: true, order: 1 },
+      { id: "i2", visibility: "all", revealed: true, order: 0 },
+    ]);
+    const visible = visibleInjectsForTeam(run, scenario, "red");
+    assert.deepEqual(visible.map((i) => i.id), ["i2", "i1"]);
   });
 });
