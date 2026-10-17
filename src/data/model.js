@@ -10,11 +10,15 @@
 export const VISIBILITIES = ["all", "red", "blue", "facilitator"];
 export const TEAMS = ["red", "blue"];
 export const RUN_STATUSES = ["lobby", "running", "paused", "ended"];
+export const OBJECTIVE_OUTCOMES = ["unset", "met", "partial", "missed"];
 
 // One place for how each visibility reads and is colored, so the Scenario
 // Library and Run Console can't drift out of sync with each other.
 export const VISIBILITY_LABEL = { all: "All", red: "Red Team", blue: "Blue Team", facilitator: "Facilitator only" };
 export const VISIBILITY_COLOR = { all: "#87A29C", red: "#E2492E", blue: "#33C17A", facilitator: "#3FA7D6" };
+
+export const OBJECTIVE_OUTCOME_LABEL = { unset: "Not yet assessed", met: "Met", partial: "Partially met", missed: "Missed" };
+export const OBJECTIVE_OUTCOME_COLOR = { unset: "#6B7280", met: "#33C17A", partial: "#D6A23F", missed: "#E2492E" };
 
 /** Short random id. Good enough for a local-only store with nothing else to collide with. */
 export function uid() {
@@ -63,6 +67,12 @@ export function emptyRun(scenario) {
     blueLog: [],
     startedAt: null,
     endedAt: null,
+    // Snapshotted from the scenario's objectives at creation time, same as
+    // scenarioTitleSnapshot above — editing a scenario's objectives later
+    // doesn't retroactively change what an in-progress or past run is being
+    // graded against. Each one tracks its own met/partial/missed outcome,
+    // assessed by the facilitator any time during or after the run.
+    objectiveOutcomes: (scenario.objectives || []).map((text) => ({ text, outcome: "unset" })),
     // Elapsed-time tracking: pausedMs is the total time spent paused so far
     // (folded in each time a pause ends), pausedAt is when the *current*
     // pause started, or null when not paused. Keeping these separate (rather
@@ -89,6 +99,13 @@ function normalizeInject(inj, index = 0) {
     order: inj.order ?? index,
     triggerNote: inj.triggerNote || "",
     createdAt: inj.createdAt || Date.now(),
+  };
+}
+
+function normalizeObjectiveOutcome(o) {
+  return {
+    text: o?.text || "",
+    outcome: OBJECTIVE_OUTCOMES.includes(o?.outcome) ? o.outcome : "unset",
   };
 }
 
@@ -121,6 +138,7 @@ export function normalizeRun(r) {
     endedAt: r.endedAt || null,
     pausedMs: r.pausedMs || 0,
     pausedAt: r.pausedAt || null,
+    objectiveOutcomes: (r.objectiveOutcomes || []).map(normalizeObjectiveOutcome),
     createdAt: r.createdAt || Date.now(),
   };
 }

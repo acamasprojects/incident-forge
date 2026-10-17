@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { emptyRun, uid, VISIBILITY_LABEL, VISIBILITY_COLOR } from "../../data/model.js";
+import { emptyRun, uid, VISIBILITY_LABEL, VISIBILITY_COLOR, OBJECTIVE_OUTCOMES, OBJECTIVE_OUTCOME_LABEL } from "../../data/model.js";
 import { printAfterActionReport, exportRunJson } from "../../utils/exportAfterAction.js";
 import { elapsedMs, formatDuration } from "../../utils/elapsedTime.js";
+import ChoiceChips from "../ChoiceChips.jsx";
 
 const STATUS_LABEL = { lobby: "Ready to start", running: "Running", paused: "Paused", ended: "Ended" };
 
@@ -111,6 +112,17 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
     );
   };
 
+  // Editable at any point in the run's life, including after it's ended —
+  // assessing whether an objective was met is often easiest in hindsight,
+  // and the facilitator shouldn't lose that ability just because the
+  // exercise is over.
+  const setObjectiveOutcome = (runId, index, outcome) => {
+    updateRun(runId, (r) => ({
+      ...r,
+      objectiveOutcomes: r.objectiveOutcomes.map((o, i) => (i === index ? { ...o, outcome } : o)),
+    }));
+  };
+
   const revealInject = (runId, injectId) => {
     updateRun(runId, (r) => {
       if (r.revealedInjectIds.includes(injectId)) return r;
@@ -216,6 +228,25 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
           )}
         </div>
       </div>
+
+      {mostRecentRun.objectiveOutcomes.length > 0 && (
+        <div className="rb-field">
+          <span className="rb-field-label">Objectives</span>
+          <div className="rb-objective-outcomes-list">
+            {mostRecentRun.objectiveOutcomes.map((o, index) => (
+              <div key={index} className="rb-objective-outcome-row">
+                <span className="rb-objective-outcome-text">{o.text}</span>
+                <ChoiceChips
+                  values={OBJECTIVE_OUTCOMES}
+                  value={o.outcome}
+                  onChange={(outcome) => setObjectiveOutcome(mostRecentRun.id, index, outcome)}
+                  formatLabel={(v) => OBJECTIVE_OUTCOME_LABEL[v]}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="rb-field">
         <span className="rb-field-label">Injects</span>

@@ -7,6 +7,8 @@
 // - a raw JSON download (Blob + <a download>), modeled on App.jsx's backup
 //   export
 
+import { OBJECTIVE_OUTCOME_LABEL, OBJECTIVE_OUTCOME_COLOR } from "../data/model.js";
+
 function esc(str) {
   return String(str ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -53,10 +55,24 @@ export function buildAfterActionHtml(run, scenario) {
   const title = scenario?.title || run.scenarioTitleSnapshot || "Untitled scenario";
   const fmt = (ts) => (ts ? new Date(ts).toLocaleString() : "—");
 
+  // Prefer the run's own objective snapshot (with outcomes) — fall back to
+  // the scenario's live objectives, unassessed, only for a run that predates
+  // this field (objectiveOutcomes backfills to [] for those, same as any
+  // other normalizeRun() backfill).
+  const objectiveEntries =
+    run.objectiveOutcomes.length > 0
+      ? run.objectiveOutcomes
+      : (scenario?.objectives || []).map((text) => ({ text, outcome: "unset" }));
+
   const objectivesHtml =
-    (scenario?.objectives || []).length === 0
+    objectiveEntries.length === 0
       ? ""
-      : `<h2>Objectives</h2><ul>${scenario.objectives.map((o) => `<li>${esc(o)}</li>`).join("")}</ul>`;
+      : `<h2>Objectives</h2><ul class="objectives">${objectiveEntries
+          .map(
+            (o) =>
+              `<li><span class="outcome-badge" style="color:${OBJECTIVE_OUTCOME_COLOR[o.outcome]};border-color:${OBJECTIVE_OUTCOME_COLOR[o.outcome]}">${esc(OBJECTIVE_OUTCOME_LABEL[o.outcome])}</span>${esc(o.text)}</li>`
+          )
+          .join("")}</ul>`;
 
   const timelineHtml =
     timeline.length === 0
@@ -83,6 +99,9 @@ export function buildAfterActionHtml(run, scenario) {
   h1 { font-size: 22px; border-bottom: 2px solid #1a1a1a; padding-bottom: 8px; }
   h2 { font-size: 17px; margin-top: 28px; border-bottom: 1px solid #999; padding-bottom: 4px; }
   .meta { color: #666; font-size: 13px; margin-bottom: 20px; }
+  ul.objectives { padding-left: 0; list-style: none; }
+  ul.objectives li { margin-bottom: 6px; }
+  .outcome-badge { display: inline-block; border: 1px solid; border-radius: 3px; padding: 1px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; margin-right: 8px; }
   ul.timeline { list-style: none; padding: 0; }
   ul.timeline li { border-left: 3px solid #ccc; padding: 6px 0 6px 14px; margin-bottom: 10px; }
   .time { font-family: 'Courier New', monospace; font-size: 12px; color: #888; margin-right: 10px; }
