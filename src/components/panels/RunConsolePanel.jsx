@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { emptyRun, uid, foldOpenPause, VISIBILITY_LABEL, VISIBILITY_COLOR, OBJECTIVE_OUTCOMES, OBJECTIVE_OUTCOME_LABEL } from "../../data/model.js";
+import { VISIBILITY_LABEL, VISIBILITY_COLOR, OBJECTIVE_OUTCOMES, OBJECTIVE_OUTCOME_LABEL } from "../../data/model.js";
 import { printAfterActionReport, exportRunJson } from "../../utils/exportAfterAction.js";
 import { elapsedMs, formatDuration } from "../../utils/elapsedTime.js";
 import ChoiceChips from "../ChoiceChips.jsx";
@@ -16,7 +16,21 @@ const STATUS_LABEL = { lobby: "Ready to start", running: "Running", paused: "Pau
  * Older ended runs stay in the store (nothing is deleted) and show up below
  * as a Past Runs list, each with its own report/export buttons.
  */
-export default function RunConsolePanel({ store, update, flash, onImportRun }) {
+export default function RunConsolePanel({
+  store,
+  update,
+  flash,
+  onImportRun,
+  createRun,
+  cancelRun,
+  startExercise,
+  pauseExercise,
+  resumeExercise,
+  endExercise,
+  revealInject,
+  setObjectiveOutcome,
+  setDebriefNotes,
+}) {
   const [pickedScenarioId, setPickedScenarioId] = useState(store.scenarios[0]?.id || "");
   const importInputRef = useRef(null);
 
@@ -55,79 +69,27 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
     return () => clearInterval(id);
   }, [mostRecentRun?.id, mostRecentRun?.status]);
 
-  const logEvent = (run, type, payload = {}) => ({
-    ...run,
-    events: [...run.events, { id: uid(), type, payload, at: Date.now() }],
-  });
-
-  const updateRun = (runId, fn) => {
-    update((st) => ({ ...st, runs: st.runs.map((r) => (r.id === runId ? fn(r) : r)) }));
-  };
+  // The actual mutations (createRun, cancelRun, startExercise, etc.) live in
+  // useExerciseStore now, not here — this component's job is just the UI
+  // concerns around them: confirm dialogs, undo snapshots, toasts.
 
   const startNewRun = () => {
     const picked = store.scenarios.find((s) => s.id === pickedScenarioId);
     if (!picked) return;
-    // The check happens inside the updater, not against the `isLive` closed
-    // over from the last render — a rapid double-click fires this twice
-    // before React re-renders to hide the button, and only the updater sees
-    // the true latest state in time for the second call to catch it.
-    update((st) => {
-      const alreadyLive = st.runs.some((r) => r.status !== "ended");
-      if (alreadyLive) return st;
-      return { ...st, runs: [...st.runs, emptyRun(picked)] };
-    });
+    createRun(picked);
     flash("Run created");
   };
 
-  const cancelRun = (runId) => {
+  const handleCancelRun = (runId) => {
     if (!confirm("Cancel this run before it's started?")) return;
     const snapshot = store;
-    update((st) => ({ ...st, runs: st.runs.filter((r) => r.id !== runId) }));
+    cancelRun(runId);
     flash("Run cancelled", { onUndo: () => update(() => snapshot) });
   };
 
-  const startExercise = (runId) => {
-    updateRun(runId, (r) => logEvent({ ...r, status: "running", startedAt: Date.now() }, "status_changed", { status: "running" }));
-  };
-  const pauseExercise = (runId) => {
-    updateRun(runId, (r) => logEvent({ ...r, status: "paused", pausedAt: Date.now() }, "status_changed", { status: "paused" }));
-  };
-  const resumeExercise = (runId) => {
-    updateRun(runId, (r) =>
-      logEvent({ ...r, status: "running", pausedMs: foldOpenPause(r), pausedAt: null }, "status_changed", { status: "running" })
-    );
-  };
-  const endExercise = (runId) => {
+  const handleEndExercise = (runId) => {
     if (!confirm("End this exercise? The logs stick around, but no more injects can be revealed.")) return;
-    updateRun(runId, (r) =>
-      logEvent(
-        { ...r, status: "ended", endedAt: Date.now(), pausedMs: foldOpenPause(r), pausedAt: null },
-        "status_changed",
-        { status: "ended" }
-      )
-    );
-  };
-
-  // Editable at any point in the run's life, including after it's ended —
-  // assessing whether an objective was met is often easiest in hindsight,
-  // and the facilitator shouldn't lose that ability just because the
-  // exercise is over.
-  const setObjectiveOutcome = (runId, index, outcome) => {
-    updateRun(runId, (r) => ({
-      ...r,
-      objectiveOutcomes: r.objectiveOutcomes.map((o, i) => (i === index ? { ...o, outcome } : o)),
-    }));
-  };
-
-  const setDebriefNotes = (runId, text) => {
-    updateRun(runId, (r) => ({ ...r, debriefNotes: text }));
-  };
-
-  const revealInject = (runId, injectId) => {
-    updateRun(runId, (r) => {
-      if (r.revealedInjectIds.includes(injectId)) return r;
-      return logEvent({ ...r, revealedInjectIds: [...r.revealedInjectIds, injectId] }, "inject_revealed", { injectId });
-    });
+    endExercise(runId);
   };
 
   const scenarioPicker = (
@@ -191,7 +153,7 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
               <button type="button" className="rb-btn rb-btn-primary" onClick={() => startExercise(mostRecentRun.id)}>
                 Start Exercise
               </button>
-              <button type="button" className="rb-btn rb-btn-ghost" onClick={() => cancelRun(mostRecentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-ghost" onClick={() => handleCancelRun(mostRecentRun.id)}>
                 Cancel
               </button>
             </>
@@ -201,7 +163,7 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
               <button type="button" className="rb-btn rb-btn-ghost" onClick={() => pauseExercise(mostRecentRun.id)}>
                 Pause
               </button>
-              <button type="button" className="rb-btn rb-btn-danger" onClick={() => endExercise(mostRecentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-danger" onClick={() => handleEndExercise(mostRecentRun.id)}>
                 End Exercise
               </button>
             </>
@@ -211,7 +173,7 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
               <button type="button" className="rb-btn rb-btn-primary" onClick={() => resumeExercise(mostRecentRun.id)}>
                 Resume
               </button>
-              <button type="button" className="rb-btn rb-btn-danger" onClick={() => endExercise(mostRecentRun.id)}>
+              <button type="button" className="rb-btn rb-btn-danger" onClick={() => handleEndExercise(mostRecentRun.id)}>
                 End Exercise
               </button>
             </>
