@@ -127,4 +127,13 @@ describe("importRunExport", () => {
     assert.equal(next.scenarios.length, 0);
     assert.equal(next.runs[0].scenarioId, data.run.scenarioId);
   });
+
+  test("folds an open pause into pausedMs instead of leaving pausedAt set on an ended run", () => {
+    const data = buildExport();
+    data.run.pausedAt = data.run.startedAt + 1000; // paused 1s after starting
+    data.run.endedAt = data.run.startedAt + 5000; // exported 4s into that pause
+    const next = importRunExport(emptyStore(), data);
+    assert.equal(next.runs[0].pausedAt, null);
+    assert.equal(next.runs[0].pausedMs, 4000);
+  });
 });

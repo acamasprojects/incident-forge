@@ -63,6 +63,14 @@ export function emptyRun(scenario) {
     blueLog: [],
     startedAt: null,
     endedAt: null,
+    // Elapsed-time tracking: pausedMs is the total time spent paused so far
+    // (folded in each time a pause ends), pausedAt is when the *current*
+    // pause started, or null when not paused. Keeping these separate (rather
+    // than just subtracting at the end) is what lets the live clock stop
+    // counting the instant the exercise is paused instead of only correcting
+    // for it after the fact.
+    pausedMs: 0,
+    pausedAt: null,
     createdAt: Date.now(),
   };
 }
@@ -111,6 +119,8 @@ export function normalizeRun(r) {
     blueLog: r.blueLog || [],
     startedAt: r.startedAt || null,
     endedAt: r.endedAt || null,
+    pausedMs: r.pausedMs || 0,
+    pausedAt: r.pausedAt || null,
     createdAt: r.createdAt || Date.now(),
   };
 }
@@ -161,6 +171,13 @@ export function importRunExport(store, data) {
   const remapInjectId = (id) => (id ? injectIdMap.get(id) || id : id);
 
   const normalizedRun = normalizeRun(data.run);
+  // If the file was exported mid-pause, fold that open pause into pausedMs
+  // the same way resumeExercise/endExercise do — otherwise pausedAt would
+  // stay set on a run we're about to force to "ended", which the elapsed-
+  // time math assumes can't happen.
+  const pausedMs = normalizedRun.pausedAt
+    ? normalizedRun.pausedMs + ((normalizedRun.endedAt || normalizedRun.createdAt) - normalizedRun.pausedAt)
+    : normalizedRun.pausedMs;
   const run = {
     ...normalizedRun,
     id: uid(),
@@ -175,6 +192,8 @@ export function importRunExport(store, data) {
     blueLog: normalizedRun.blueLog.map((e) => ({ ...e, id: uid(), injectId: remapInjectId(e.injectId) })),
     status: "ended",
     endedAt: normalizedRun.endedAt || normalizedRun.startedAt || normalizedRun.createdAt,
+    pausedMs,
+    pausedAt: null,
   };
 
   return {
