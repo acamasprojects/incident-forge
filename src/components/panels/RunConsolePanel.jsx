@@ -11,13 +11,15 @@ const STATUS_LABEL = { lobby: "Ready to start", running: "Running", paused: "Pau
  * the moment it's over. Starting another run is only offered once the last
  * one has ended, so there's never more than one exercise live at a time.
  *
- * Only this one run is surfaced here — older ended runs stay in the store
- * (nothing is deleted) but there's no history browser for them yet.
+ * Older ended runs stay in the store (nothing is deleted) and show up below
+ * as a Past Runs list, each with its own report/export buttons.
  */
 export default function RunConsolePanel({ store, update, flash }) {
   const [pickedScenarioId, setPickedScenarioId] = useState(store.scenarios[0]?.id || "");
 
-  const mostRecentRun = [...store.runs].reverse()[0] || null;
+  const runsNewestFirst = [...store.runs].reverse();
+  const mostRecentRun = runsNewestFirst[0] || null;
+  const pastRuns = runsNewestFirst.slice(1);
   const isLive = mostRecentRun && mostRecentRun.status !== "ended";
   const scenario = mostRecentRun ? store.scenarios.find((s) => s.id === mostRecentRun.scenarioId) : null;
 
@@ -221,6 +223,37 @@ export default function RunConsolePanel({ store, update, flash }) {
           ) : (
             scenarioPicker
           )}
+        </div>
+      )}
+
+      {pastRuns.length > 0 && (
+        <div className="rb-field rb-injects-field">
+          <span className="rb-field-label">Past runs</span>
+          <div className="rb-past-runs-list">
+            {pastRuns.map((r) => {
+              const rScenario = store.scenarios.find((s) => s.id === r.scenarioId);
+              return (
+                <div key={r.id} className="rb-past-run-row">
+                  <div className="rb-past-run-main">
+                    <span className="rb-past-run-title">{rScenario?.title || r.scenarioTitleSnapshot || "Untitled scenario"}</span>
+                    <span className="rb-badge">{STATUS_LABEL[r.status]}</span>
+                  </div>
+                  <div className="rb-past-run-dates">
+                    {r.startedAt ? new Date(r.startedAt).toLocaleString() : "Never started"}
+                    {r.endedAt ? ` – ${new Date(r.endedAt).toLocaleString()}` : ""}
+                  </div>
+                  <div className="rb-past-run-actions">
+                    <button type="button" className="rb-btn rb-btn-ghost rb-btn-small" onClick={() => printAfterActionReport(r, rScenario)}>
+                      Print Report
+                    </button>
+                    <button type="button" className="rb-btn rb-btn-ghost rb-btn-small" onClick={() => exportRunJson(r, rScenario)}>
+                      Download JSON
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
