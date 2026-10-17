@@ -69,7 +69,9 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
 
   const cancelRun = (runId) => {
     if (!confirm("Cancel this run before it's started?")) return;
+    const snapshot = store;
     update((st) => ({ ...st, runs: st.runs.filter((r) => r.id !== runId) }));
+    flash("Run cancelled", { onUndo: () => update(() => snapshot) });
   };
 
   const startExercise = (runId) => {
