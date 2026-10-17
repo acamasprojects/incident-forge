@@ -284,4 +284,10 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
   background: var(--ink-3); border: 1px solid var(--accent); color: var(--text-bright);
   padding: 9px 18px; border-radius: 2px; font-size: 12.5px; z-index: 50;
+  display: flex; align-items: center; gap: 14px;
 }
+.rb-toast-undo {
+  background: none; border: none; color: var(--accent-2); font-weight: 700;
+  font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.03em; cursor: pointer; padding: 0;
+}
+.rb-toast-undo:hover { color: var(--text-bright); text-decoration: underline; }

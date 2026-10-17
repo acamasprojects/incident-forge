@@ -86,7 +86,10 @@ export default function ScenarioLibraryPanel({ store, update, flash }) {
       flash("Can't delete — this scenario is running an active exercise. End the run first.");
       return;
     }
+    const snapshot = store;
+    const title = store.scenarios.find((s) => s.id === id)?.title || "Untitled";
     update((st) => ({ ...st, scenarios: st.scenarios.filter((s) => s.id !== id) }));
+    flash(`Deleted "${title}"`, { onUndo: () => update(() => snapshot) });
   };
 
   // Objectives are a plain list of short strings, edited by index.
@@ -130,12 +133,15 @@ export default function ScenarioLibraryPanel({ store, update, flash }) {
   };
 
   const removeInject = (scenarioId, injectId) => {
+    const snapshot = store;
+    const title = store.scenarios.find((s) => s.id === scenarioId)?.injects.find((i) => i.id === injectId)?.title || "Untitled";
     update((st) => ({
       ...st,
       scenarios: st.scenarios.map((s) =>
         s.id !== scenarioId ? s : { ...s, injects: s.injects.filter((i) => i.id !== injectId) }
       ),
     }));
+    flash(`Deleted inject "${title}"`, { onUndo: () => update(() => snapshot) });
   };
 
   /** Swap this inject's order with its neighbor in the revealed-order list. */

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useExerciseStore } from "./hooks/useExerciseStore.js";
 import ScenarioLibraryPanel from "./components/panels/ScenarioLibraryPanel.jsx";
 import RunConsolePanel from "./components/panels/RunConsolePanel.jsx";
@@ -19,11 +19,16 @@ export default function App() {
   const { loaded, store, update, importRun } = useExerciseStore();
   const [viewMode, setViewMode] = useState("facilitator");
   const [facilitatorTab, setFacilitatorTab] = useState("scenarios");
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState(null); // { msg, onUndo? } | null
+  const toastTimer = useRef(null);
 
-  const flash = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 1800);
+  // An undo-capable toast stays up longer (6s vs 1.8s) and shows an Undo
+  // button that just re-applies the pre-delete store snapshot the caller
+  // captured — same restore primitive (update) as any other edit.
+  const flash = (msg, { onUndo } = {}) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, onUndo });
+    toastTimer.current = setTimeout(() => setToast(null), onUndo ? 6000 : 1800);
   };
 
   const handleImportRun = (file) => {
@@ -102,7 +107,23 @@ export default function App() {
           {viewMode === "blue" && <TeamViewPanel team="blue" store={store} update={update} />}
         </main>
       </div>
-      {toast && <div className="rb-toast">{toast}</div>}
+      {toast && (
+        <div className="rb-toast">
+          {toast.msg}
+          {toast.onUndo && (
+            <button
+              type="button"
+              className="rb-toast-undo"
+              onClick={() => {
+                toast.onUndo();
+                setToast(null);
+              }}
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
