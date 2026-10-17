@@ -81,6 +81,32 @@ export function useExerciseStore() {
     };
   }, [writeNow]);
 
+  // A facilitator console, a Red Team view, and a Blue Team view are often
+  // open as separate tabs on the same device at the same time — that's the
+  // whole point of the view-mode split. Without this, a decision logged in
+  // one tab just sits in that tab's localStorage write until someone
+  // manually reloads the others. The browser's 'storage' event only ever
+  // fires in *other* tabs, never the one that made the write, so there's no
+  // feedback loop to guard against here.
+  //
+  // If this tab has an edit of its own queued up (saveTimer.current is set),
+  // the incoming update is skipped so it can't stomp on something the user
+  // just typed here before it's had a chance to save — the next 'storage'
+  // event, right after this tab's own pending write lands, picks up
+  // wherever the other tab left off.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!loaded || e.key !== STORE_KEY || !e.newValue || saveTimer.current) return;
+      try {
+        setStore(normalizeStore(JSON.parse(e.newValue)));
+      } catch {
+        // corrupt write from the other tab — ignore, keep what we have
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [loaded]);
+
   /** Apply fn to a shallow copy of the store and commit what it returns. */
   const update = useCallback((fn) => {
     setStore((prev) => fn({ ...prev }));
