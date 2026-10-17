@@ -123,6 +123,10 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
     }));
   };
 
+  const setDebriefNotes = (runId, text) => {
+    updateRun(runId, (r) => ({ ...r, debriefNotes: text }));
+  };
+
   const revealInject = (runId, injectId) => {
     updateRun(runId, (r) => {
       if (r.revealedInjectIds.includes(injectId)) return r;
@@ -296,6 +300,16 @@ export default function RunConsolePanel({ store, update, flash, onImportRun }) {
           <LogColumn title="Red Team" entries={mostRecentRun.redLog} injects={scenario?.injects || []} />
           <LogColumn title="Blue Team" entries={mostRecentRun.blueLog} injects={scenario?.injects || []} />
         </div>
+      </div>
+
+      <div className="rb-field">
+        <span className="rb-field-label">Debrief notes</span>
+        <textarea
+          className="rb-textarea"
+          value={mostRecentRun.debriefNotes}
+          onChange={(e) => setDebriefNotes(mostRecentRun.id, e.target.value)}
+          placeholder="What went well, what to change next time…"
+        />
       </div>
 
       {!isLive && (

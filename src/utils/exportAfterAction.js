@@ -122,6 +122,8 @@ export function buildAfterActionHtml(run, scenario) {
 
   <h2>Timeline</h2>
   ${timelineHtml}
+
+  ${run.debriefNotes ? `<h2>Debrief Notes</h2><p>${esc(run.debriefNotes).replace(/\n/g, "<br>")}</p>` : ""}
 </body>
 </html>`;
 }
