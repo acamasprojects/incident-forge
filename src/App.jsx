@@ -16,7 +16,7 @@ const FACILITATOR_TABS = [
 ];
 
 export default function App() {
-  const { loaded, store, update } = useExerciseStore();
+  const { loaded, store, update, importRun } = useExerciseStore();
   const [viewMode, setViewMode] = useState("facilitator");
   const [facilitatorTab, setFacilitatorTab] = useState("scenarios");
   const [toast, setToast] = useState(null);
@@ -24,6 +24,21 @@ export default function App() {
   const flash = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 1800);
+  };
+
+  const handleImportRun = (file) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        importRun(parsed);
+        flash(parsed.scenario ? "Imported run and its scenario" : "Imported run");
+      } catch (e) {
+        flash("Import failed — invalid file");
+        console.error(e);
+      }
+    };
+    reader.readAsText(file);
   };
 
   if (!loaded) {
@@ -78,7 +93,7 @@ export default function App() {
                 <ScenarioLibraryPanel store={store} update={update} flash={flash} />
               )}
               {facilitatorTab === "run" && (
-                <RunConsolePanel store={store} update={update} flash={flash} />
+                <RunConsolePanel store={store} update={update} flash={flash} onImportRun={handleImportRun} />
               )}
             </>
           )}

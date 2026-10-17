@@ -122,3 +122,64 @@ export function normalizeStore(store) {
     runs: (store?.runs || []).map(normalizeRun),
   };
 }
+
+/**
+ * Merges one run-export file (the shape exportRunJson() produces — { run,
+ * scenario }) into an existing store. Never overwrites anything already
+ * there: the incoming scenario (if present) and run are always given fresh
+ * ids, and every inject reference inside the run (revealedInjectIds, the
+ * events log, both team logs) is remapped to match, so importing the exact
+ * same file twice just creates two independent copies instead of colliding
+ * with — or silently overwriting — whatever's already in the store.
+ *
+ * The run is always forced to "ended" on the way in. It's historical data
+ * coming from a file, not a live exercise, and the rest of the app assumes
+ * at most one non-ended run exists at a time (see startNewRun in
+ * RunConsolePanel) — importing a "running" run from a file would violate
+ * that invariant.
+ */
+export function importRunExport(store, data) {
+  if (!data || typeof data !== "object" || !data.run) {
+    throw new Error("Not a recognized Incident Forge run export");
+  }
+
+  const injectIdMap = new Map();
+  let scenario = null;
+  if (data.scenario) {
+    const normalized = normalizeScenario(data.scenario);
+    scenario = {
+      ...normalized,
+      id: uid(),
+      injects: normalized.injects.map((inj) => {
+        const newId = uid();
+        injectIdMap.set(inj.id, newId);
+        return { ...inj, id: newId };
+      }),
+    };
+  }
+
+  const remapInjectId = (id) => (id ? injectIdMap.get(id) || id : id);
+
+  const normalizedRun = normalizeRun(data.run);
+  const run = {
+    ...normalizedRun,
+    id: uid(),
+    scenarioId: scenario ? scenario.id : normalizedRun.scenarioId,
+    revealedInjectIds: normalizedRun.revealedInjectIds.map(remapInjectId),
+    events: normalizedRun.events.map((e) => ({
+      ...e,
+      id: uid(),
+      payload: e.payload?.injectId ? { ...e.payload, injectId: remapInjectId(e.payload.injectId) } : e.payload,
+    })),
+    redLog: normalizedRun.redLog.map((e) => ({ ...e, id: uid(), injectId: remapInjectId(e.injectId) })),
+    blueLog: normalizedRun.blueLog.map((e) => ({ ...e, id: uid(), injectId: remapInjectId(e.injectId) })),
+    status: "ended",
+    endedAt: normalizedRun.endedAt || normalizedRun.startedAt || normalizedRun.createdAt,
+  };
+
+  return {
+    ...store,
+    scenarios: scenario ? [scenario, ...store.scenarios] : store.scenarios,
+    runs: [...store.runs, run],
+  };
+}
