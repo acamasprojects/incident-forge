@@ -7,8 +7,9 @@ is saved to your browser's local storage: nothing leaves your machine, no accoun
 
 v1 is single-device. Red and Blue views are a convenience toggle meant for handing off the same
 screen (or for a facilitator narrating to a room), not a secret enforced between separate people on
-separate machines. See `CONTRIBUTING.md` for how changes get made, and open issues for the planned
-multi-device upgrade path.
+separate machines. See `CONTRIBUTING.md` for how changes get made, and
+[`docs/multi-device-sync-plan.md`](docs/multi-device-sync-plan.md) for the design behind the planned
+multi-device upgrade (not built yet).
 
 ## How to use it
 
