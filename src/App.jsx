@@ -16,7 +16,22 @@ const FACILITATOR_TABS = [
 ];
 
 export default function App() {
-  const { loaded, store, update, importRun } = useExerciseStore();
+  const {
+    loaded,
+    store,
+    update,
+    importRun,
+    createRun,
+    cancelRun,
+    startExercise,
+    pauseExercise,
+    resumeExercise,
+    endExercise,
+    revealInject,
+    setObjectiveOutcome,
+    setDebriefNotes,
+    logDecision,
+  } = useExerciseStore();
   const [viewMode, setViewMode] = useState("facilitator");
   const [facilitatorTab, setFacilitatorTab] = useState("scenarios");
   const [toast, setToast] = useState(null); // { msg, onUndo? } | null
@@ -98,13 +113,27 @@ export default function App() {
                 <ScenarioLibraryPanel store={store} update={update} flash={flash} />
               )}
               {facilitatorTab === "run" && (
-                <RunConsolePanel store={store} update={update} flash={flash} onImportRun={handleImportRun} />
+                <RunConsolePanel
+                  store={store}
+                  update={update}
+                  flash={flash}
+                  onImportRun={handleImportRun}
+                  createRun={createRun}
+                  cancelRun={cancelRun}
+                  startExercise={startExercise}
+                  pauseExercise={pauseExercise}
+                  resumeExercise={resumeExercise}
+                  endExercise={endExercise}
+                  revealInject={revealInject}
+                  setObjectiveOutcome={setObjectiveOutcome}
+                  setDebriefNotes={setDebriefNotes}
+                />
               )}
             </>
           )}
 
-          {viewMode === "red" && <TeamViewPanel team="red" store={store} update={update} />}
-          {viewMode === "blue" && <TeamViewPanel team="blue" store={store} update={update} />}
+          {viewMode === "red" && <TeamViewPanel team="red" store={store} logDecision={logDecision} />}
+          {viewMode === "blue" && <TeamViewPanel team="blue" store={store} logDecision={logDecision} />}
         </main>
       </div>
       {toast && (

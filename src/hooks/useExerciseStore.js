@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { emptyStore, normalizeStore, importRunExport } from "../data/model.js";
+import { emptyStore, emptyRun, normalizeStore, importRunExport, foldOpenPause, uid } from "../data/model.js";
 
 const STORE_KEY = "incident-forge-data";
 
@@ -122,5 +122,143 @@ export function useExerciseStore() {
     setStore((prev) => importRunExport(prev, data));
   }, []);
 
-  return { loaded, store, update, replaceStore, importRun };
+  // --- Run-mutation actions ---
+  // Every mutation that happens during a live run lives here instead of in
+  // the components that trigger it. A future multi-device backend would
+  // swap what's inside these (a local update(...) becomes an awaited
+  // network write), without the UI layer needing to change at all — see
+  // docs/multi-device-sync-plan.md. Scenario authoring (outside the
+  // RunConsolePanel/TeamViewPanel UI) stays simple inline update() calls in
+  // ScenarioLibraryPanel, since that only ever happens locally before or
+  // between live runs, not during one.
+
+  const logEvent = (run, type, payload = {}) => ({
+    ...run,
+    events: [...run.events, { id: uid(), type, payload, at: Date.now() }],
+  });
+
+  const updateRun = useCallback(
+    (runId, fn) => {
+      update((st) => ({ ...st, runs: st.runs.map((r) => (r.id === runId ? fn(r) : r)) }));
+    },
+    [update]
+  );
+
+  /** Starts a new run, unless one is already live. Returns nothing — the caller re-renders off the updated store. */
+  const createRun = useCallback(
+    (scenario) => {
+      // The check happens inside the updater, not against a snapshot closed
+      // over from the last render — a rapid double-click fires this twice
+      // before React re-renders to hide the button, and only the updater
+      // sees the true latest state in time for the second call to catch it.
+      update((st) => {
+        const alreadyLive = st.runs.some((r) => r.status !== "ended");
+        if (alreadyLive) return st;
+        return { ...st, runs: [...st.runs, emptyRun(scenario)] };
+      });
+    },
+    [update]
+  );
+
+  const cancelRun = useCallback(
+    (runId) => {
+      update((st) => ({ ...st, runs: st.runs.filter((r) => r.id !== runId) }));
+    },
+    [update]
+  );
+
+  const startExercise = useCallback(
+    (runId) => {
+      updateRun(runId, (r) => logEvent({ ...r, status: "running", startedAt: Date.now() }, "status_changed", { status: "running" }));
+    },
+    [updateRun]
+  );
+
+  const pauseExercise = useCallback(
+    (runId) => {
+      updateRun(runId, (r) => logEvent({ ...r, status: "paused", pausedAt: Date.now() }, "status_changed", { status: "paused" }));
+    },
+    [updateRun]
+  );
+
+  const resumeExercise = useCallback(
+    (runId) => {
+      updateRun(runId, (r) =>
+        logEvent({ ...r, status: "running", pausedMs: foldOpenPause(r), pausedAt: null }, "status_changed", { status: "running" })
+      );
+    },
+    [updateRun]
+  );
+
+  const endExercise = useCallback(
+    (runId) => {
+      updateRun(runId, (r) =>
+        logEvent(
+          { ...r, status: "ended", endedAt: Date.now(), pausedMs: foldOpenPause(r), pausedAt: null },
+          "status_changed",
+          { status: "ended" }
+        )
+      );
+    },
+    [updateRun]
+  );
+
+  const revealInject = useCallback(
+    (runId, injectId) => {
+      updateRun(runId, (r) => {
+        if (r.revealedInjectIds.includes(injectId)) return r;
+        return logEvent({ ...r, revealedInjectIds: [...r.revealedInjectIds, injectId] }, "inject_revealed", { injectId });
+      });
+    },
+    [updateRun]
+  );
+
+  // Editable at any point in the run's life, including after it's ended —
+  // assessing whether an objective was met is often easiest in hindsight,
+  // and the facilitator shouldn't lose that ability just because the
+  // exercise is over.
+  const setObjectiveOutcome = useCallback(
+    (runId, index, outcome) => {
+      updateRun(runId, (r) => ({
+        ...r,
+        objectiveOutcomes: r.objectiveOutcomes.map((o, i) => (i === index ? { ...o, outcome } : o)),
+      }));
+    },
+    [updateRun]
+  );
+
+  const setDebriefNotes = useCallback(
+    (runId, text) => {
+      updateRun(runId, (r) => ({ ...r, debriefNotes: text }));
+    },
+    [updateRun]
+  );
+
+  /** Logs a decision for one team. injectId should already be validated against that team's currently-visible injects by the caller. */
+  const logDecision = useCallback(
+    (runId, team, body, injectId) => {
+      const logKey = team === "red" ? "redLog" : "blueLog";
+      const entry = { id: uid(), injectId: injectId || null, body, at: Date.now() };
+      updateRun(runId, (r) => ({ ...r, [logKey]: [...r[logKey], entry] }));
+    },
+    [updateRun]
+  );
+
+  return {
+    loaded,
+    store,
+    update,
+    replaceStore,
+    importRun,
+    createRun,
+    cancelRun,
+    startExercise,
+    pauseExercise,
+    resumeExercise,
+    endExercise,
+    revealInject,
+    setObjectiveOutcome,
+    setDebriefNotes,
+    logDecision,
+  };
 }

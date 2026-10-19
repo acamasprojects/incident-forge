@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { uid, visibleInjectsForTeam } from "../../data/model.js";
+import { visibleInjectsForTeam } from "../../data/model.js";
 import { elapsedMs, formatDuration } from "../../utils/elapsedTime.js";
 
 const TEAM_LABEL = { red: "Red Team", blue: "Blue Team" };
@@ -9,7 +9,7 @@ const TEAM_LABEL = { red: "Red Team", blue: "Blue Team" };
  * Shows only injects visible to that team (visibility "all" or a match), and
  * a log that's this team's own — it never reads the other team's log.
  */
-export default function TeamViewPanel({ team, store, update }) {
+export default function TeamViewPanel({ team, store, logDecision }) {
   const [draft, setDraft] = useState("");
   const [linkedInjectId, setLinkedInjectId] = useState("");
 
@@ -67,11 +67,7 @@ export default function TeamViewPanel({ team, store, update }) {
     // visibleInjects — belt and suspenders against any stale state slipping
     // through before the effect above has a chance to clear it.
     const safeInjectId = visibleInjects.some((i) => i.id === linkedInjectId) ? linkedInjectId : null;
-    const entry = { id: uid(), injectId: safeInjectId, body: draft.trim(), at: Date.now() };
-    update((st) => ({
-      ...st,
-      runs: st.runs.map((r) => (r.id === currentRun.id ? { ...r, [logKey]: [...r[logKey], entry] } : r)),
-    }));
+    logDecision(currentRun.id, team, draft.trim(), safeInjectId);
     setDraft("");
   };
 
